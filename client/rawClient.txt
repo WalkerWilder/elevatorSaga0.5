@@ -1,0 +1,54 @@
+{
+	init: async function (elevators, floors) {
+		elevators.forEach((elevator, i) => {
+			elevator.id = i;
+			elevator.on("idle", () => {
+				elevator.goToFloor(0);
+				elevator.goToFloor(1);
+				elevator.goToFloor(2);
+			});
+		});
+		await this.connect();
+		await this.sendObjectState(elevators, floors);
+	},
+	connect: async function () {
+		const wsUrl = "ws://localhost:9000";
+		this.socket = new WebSocket(wsUrl);
+		this.socket.addEventListener("open", this.setWsConnected);
+		this.socket.addEventListener("close", this.setWsDisconnected);
+	},
+	sendObjectState: function (elevators, floors) {
+		if (this.wsConnected) {
+			return this.sendObjectStateWs(elevators, floors);
+		}
+		return this.sendObjectStateApi(elevators, floors);
+	},
+	sendObjectStateApi: async function (elevators, floors) {
+		const apiUrl = "http://localhost:9000/gameUpdate";
+		const data = { type: "objectState", elevators, floors };
+		fetch(apiUrl, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
+		});
+	},
+	sendObjectStateWs: async function (elevators, floors) {
+		var _a;
+		(_a = this.socket) === null || _a === void 0
+			? void 0
+			: _a.send({ type: "objectState", elevators, floors });
+	},
+	setWsConnected: function () {
+		this.wsConnected = true;
+	},
+	setWsDisconnected: function () {
+		this.wsConnected = false;
+	},
+	socket: null,
+	update: function (dt, elevators, floors) {
+		// this.sendObjectState(elevators, floors);
+	},
+	wsConnected: false,
+}
