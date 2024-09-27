@@ -2,30 +2,75 @@
 	init: async function (elevators, floors) {
 		elevators.forEach((elevator, i) => {
 			elevator.id = i;
-			elevator.on("idle", () => {
-				elevator.goToFloor(0);
-				elevator.goToFloor(1);
-				elevator.goToFloor(2);
-			});
+			// elevator.on("idle", () => this.elevatorEventIdle(i));
+			// elevator.on("floor_button_pressed", (floorNum: number) =>
+			// 	this.elevatorEventFloorButtonPressed(i, floorNum)
+			// );
+			// elevator.on(
+			// 	"passing_floor",
+			// 	(floorNum: number, direction: directions) =>
+			// 		this.elevatorEventPassingFloor(i, floorNum, direction)
+			// );
+			// elevator.on("stopped_at_floor", (floorNum: number) =>
+			// 	this.elevatorEventStoppedAtFloor(i, floorNum)
+			// );
+		});
+		floors.forEach((floor) => {
+			floor.id = floor.floorNum();
+			// floor.on("up_button_pressed", () =>
+			// 	this.floorEventButtonPressed(floor.floorNum(), "up")
+			// );
+			// floor.on("up_button_pressed", () =>
+			// 	this.floorEventButtonPressed(floor.floorNum(), "down")
+			// );
 		});
 		await this.connect();
 		await this.sendObjectState(elevators, floors);
 	},
 	connect: async function () {
-		const wsUrl = "ws://localhost:9000";
+		const wsUrl = "ws://localhost:9000?id=asdf";
 		this.socket = new WebSocket(wsUrl);
-		this.socket.addEventListener("open", this.setWsConnected);
-		this.socket.addEventListener("close", this.setWsDisconnected);
+		this.socket.onopen = () => {
+			console.log("open");
+		};
 	},
-	sendObjectState: function (elevators, floors) {
-		if (this.wsConnected) {
-			return this.sendObjectStateWs(elevators, floors);
+	elevatorEventIdle: async function (id) {
+		return this.sendEvent("elevator", id, "idle");
+	},
+	elevatorEventFloorButtonPressed: async function (id, floorNum) {
+		return this.sendEvent("elevator", id, "floorButtonPressed", {
+			floorNum,
+		});
+	},
+	elevatorEventPassingFloor: async function (id, floorNum, direction) {
+		return this.sendEvent("elevator", id, "passingFloor", {
+			floorNum,
+			direction,
+		});
+	},
+	elevatorEventStoppedAtFloor: async function (id, floorNum) {
+		return this.sendEvent("elevator", id, "stoppedAtFloor", {
+			floorNum,
+		});
+	},
+	floorEventButtonPressed: async function (id, button) {
+		return this.sendEvent("floor", id, "buttonPressed", {
+			button,
+		});
+	},
+	messageServer: async function (type, id, event, data) {
+		var _a, _b;
+		if (
+			((_a = this.socket) === null || _a === void 0
+				? void 0
+				: _a.readyState) === 1
+		) {
+			const message = Object.assign({ type, id, event }, data);
+			return (_b = this.socket) === null || _b === void 0
+				? void 0
+				: _b.send(JSON.stringify(message));
 		}
-		return this.sendObjectStateApi(elevators, floors);
-	},
-	sendObjectStateApi: async function (elevators, floors) {
-		const apiUrl = "http://localhost:9000/gameUpdate";
-		const data = { type: "objectState", elevators, floors };
+		const apiUrl = `http://localhost:9000/${type}/${id}/${event}`;
 		fetch(apiUrl, {
 			method: "POST",
 			headers: {
@@ -34,21 +79,19 @@
 			body: JSON.stringify(data),
 		});
 	},
-	sendObjectStateWs: async function (elevators, floors) {
-		var _a;
-		(_a = this.socket) === null || _a === void 0
-			? void 0
-			: _a.send({ type: "objectState", elevators, floors });
+	sendEvent: async function (type, n, event, data) {
+		return this.messageServer(type, n, event, data);
 	},
-	setWsConnected: function () {
-		this.wsConnected = true;
-	},
-	setWsDisconnected: function () {
-		this.wsConnected = false;
+	sendObjectState: function (elevators, floors) {
+		const idObj = { type: "game", event: "update", id: 0 };
+		const url = `game/${"update"}`;
+		return this.messageServer("game", 0, "update", {
+			elevators,
+			floors,
+		});
 	},
 	socket: null,
 	update: function (dt, elevators, floors) {
 		// this.sendObjectState(elevators, floors);
 	},
-	wsConnected: false,
 }

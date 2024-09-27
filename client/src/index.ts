@@ -1,6 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
-import { directions, elevatorEvents, floorEvents } from "./client";
+import {
+	directions,
+	elevatorEvents,
+	floorButtons,
+	floorEvents,
+	gameEvents,
+	objectTypes,
+} from "./client";
 
 const inputFilePath = path.join(__dirname, "client.js");
 const outputFilePath = path.join(__dirname, "../rawClient.txt");
@@ -8,7 +15,10 @@ const outputFilePath = path.join(__dirname, "../rawClient.txt");
 const processedEnums = {
 	directions,
 	elevatorEvents,
+	floorButtons,
 	floorEvents,
+	gameEvents,
+	objectTypes,
 };
 
 function extractClientCode(content: string): string | null {
